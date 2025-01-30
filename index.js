@@ -17,7 +17,7 @@ const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, {polling: true});
 
 bot.on('message', async (msg) => {
     const text = msg.text;
-    if (!text || !text.includes('last') || !currentNews.text) {
+    if (!text || !text.toLowerCase().includes('last') || !currentNews.text) {
         return;
     }
     const message = `Последняя новость: "${currentNews.text()}".
