@@ -3,8 +3,8 @@ import * as cheerio from 'cheerio'; // Правильный импорт
 import * as fs from 'fs/promises';
 import TelegramBot from 'node-telegram-bot-api';
 
-const DATA_FILE = 'news.json';
-const TARGET_URL = 'https://github.com/sqwezzy33333/visa_check'; // Замените на URL целевой страницы
+const DATA_FILE = 'news.txt';
+const TARGET_URL = 'https://it.tlscontact.com/by/msq/page.php?pid=news&l=ru'; // Замените на URL целевой страницы
 
 // Замените на ваш токен и ID чата
 const TELEGRAM_BOT_TOKEN = "7101593002:AAG-64_zesJof4Lffe0p1fymvsXJ8IEKLfo";
@@ -13,7 +13,7 @@ const bot = new TelegramBot(TELEGRAM_BOT_TOKEN);
 
 async function sendTelegramMessage(message) {
     try {
-        await bot.sendMessage(TELEGRAM_CHAT_ID, message, { parse_mode: 'HTML' });
+        await bot.sendMessage(TELEGRAM_CHAT_ID, message);
         console.log('Уведомление отправлено в Telegram:', message);
     } catch (error) {
         console.error('Ошибка отправки уведомления в Telegram:', error.message);
@@ -30,72 +30,52 @@ async function getPageHTML(url) {
     }
 }
 
-function parseNews(html) {
-    if (!html) return [];
+function parseH3(html) {
+    if (!html) return '';
 
     const $ = cheerio.load(html);
-    const newsItems = [];
-    $('.news-item').each((i, el) => {
-        const title = $(el).find('.news-title').text().trim();
-        const link = $(el).find('a').attr('href');
-        const date = $(el).find('.news-date').text().trim();
-
-        newsItems.push({ title, link, date });
-    });
-
-    return newsItems;
+    return $('h3').first();
 }
 
 
 async function loadPreviousNews() {
     try {
-        const data = await fs.readFile(DATA_FILE, 'utf-8');
-        return JSON.parse(data);
+        return await fs.readFile(DATA_FILE, 'utf-8');
     } catch (error) {
-        return [];
+        return 'Новость не найдена';
     }
 }
 
 async function saveCurrentNews(news) {
-    await fs.writeFile(DATA_FILE, JSON.stringify(news, null, 2), 'utf-8');
+    await fs.writeFile(DATA_FILE, news.text(), 'utf-8');
 }
 
-function compareNews(previousNews, currentNews) {
-    const previousLinks = new Set(previousNews.map(item => item.link));
-    const newNews = currentNews.filter(item => !previousLinks.has(item.link));
-    return newNews;
-}
 
 async function notifyNewNews(news) {
-    if (news.length === 0) {
-        console.log('Нет новых новостей.');
-        return;
-    }
 
-    let message = 'Обнаружены новые новости:\n';
-    news.forEach(item => {
-        message += `- <a href="${item.link}">${item.title}</a>\n`;
-    });
+    let message = 'Обнаружена новая новость:\n';
 
-    await sendTelegramMessage(message);
+    await sendTelegramMessage(message + news.text());
 }
 
 
 async function checkNewNews() {
+    await sendTelegramMessage("Запущена проверка содержимого сайта - " + TARGET_URL);
     const html = await getPageHTML(TARGET_URL);
     if (!html) return;
 
-    const currentNews = parseNews(html);
+    const currentNews = parseH3(html);
     const previousNews = await loadPreviousNews();
-    const newNews = compareNews(previousNews, currentNews);
 
-    if(newNews.length > 0) {
-        await notifyNewNews(newNews);
+    if (currentNews.text() !== previousNews) {
+        await notifyNewNews(currentNews);
+    } else {
+        await sendTelegramMessage("Новых новостей нет");
     }
     await saveCurrentNews(currentNews);
 }
 
-async function main(){
+async function main() {
     await checkNewNews();
     //Запускаем проверку каждые 5 минут
     setInterval(checkNewNews, 5 * 60 * 1000);
