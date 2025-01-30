@@ -2,14 +2,28 @@ import axios from 'axios';
 import * as cheerio from 'cheerio'; // Правильный импорт
 import * as fs from 'fs/promises';
 import TelegramBot from 'node-telegram-bot-api';
+import moment from 'moment';
 
 const DATA_FILE = 'news.txt';
 const TARGET_URL = 'https://it.tlscontact.com/by/msq/page.php?pid=news&l=ru'; // Замените на URL целевой страницы
+let lastTime = moment().format('DD.MM - HH.mm');
+
+let currentNews = '';
 
 // Замените на ваш токен и ID чата
 const TELEGRAM_BOT_TOKEN = "7101593002:AAG-64_zesJof4Lffe0p1fymvsXJ8IEKLfo";
 const TELEGRAM_CHAT_ID = "-1002493780047"; // ID чата куда бот будет отправлять сообщения
-const bot = new TelegramBot(TELEGRAM_BOT_TOKEN);
+const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, {polling: true});
+
+bot.on('message', async (msg) => {
+    const name = msg.from.first_name;
+    const text = msg.text;
+
+    await sendTelegramMessage('Привет, ' + name);
+    if (text.includes('last')) {
+        await sendTelegramMessage(`Последняя новость: "${currentNews.text()}". Время: ${lastTime}`)
+    }
+});
 
 async function sendTelegramMessage(message) {
     try {
@@ -60,17 +74,14 @@ async function notifyNewNews(news) {
 
 
 async function checkNewNews() {
-    await sendTelegramMessage("Запущена проверка содержимого сайта - " + TARGET_URL);
     const html = await getPageHTML(TARGET_URL);
     if (!html) return;
 
-    const currentNews = parseH3(html);
+    currentNews = parseH3(html);
     const previousNews = await loadPreviousNews();
-
+    lastTime = moment().format('DD.MM - HH.mm');
     if (currentNews.text() !== previousNews) {
         await notifyNewNews(currentNews);
-    } else {
-        await sendTelegramMessage("Новых новостей нет");
     }
     await saveCurrentNews(currentNews);
 }
