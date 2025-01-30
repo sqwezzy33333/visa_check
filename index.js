@@ -12,22 +12,22 @@ let currentNews = '';
 
 // Замените на ваш токен и ID чата
 const TELEGRAM_BOT_TOKEN = "7101593002:AAG-64_zesJof4Lffe0p1fymvsXJ8IEKLfo";
-const TELEGRAM_CHAT_ID = "-1002493780047"; // ID чата куда бот будет отправлять сообщения
+const TELEGRAM_CHAT_ID = "-1002493780047";
 const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, {polling: true});
 
 bot.on('message', async (msg) => {
-    const name = msg.from.first_name;
     const text = msg.text;
-
-    await sendTelegramMessage('Привет, ' + name);
-    if (text.includes('last')) {
-        await sendTelegramMessage(`Последняя новость: "${currentNews.text()}". Время: ${lastTime}`)
+    if (!text || !text.includes('last') || !currentNews.text) {
+        return;
     }
+    const message = `Последняя новость: "${currentNews.text()}".
+Время проверки: ${lastTime}`
+    await sendTelegramMessage(message, msg.chat.id)
 });
 
-async function sendTelegramMessage(message) {
+async function sendTelegramMessage(message, id = null) {
     try {
-        await bot.sendMessage(TELEGRAM_CHAT_ID, message);
+        await bot.sendMessage(id || TELEGRAM_CHAT_ID, message);
         console.log('Уведомление отправлено в Telegram:', message);
     } catch (error) {
         console.error('Ошибка отправки уведомления в Telegram:', error.message);
@@ -61,6 +61,7 @@ async function loadPreviousNews() {
 }
 
 async function saveCurrentNews(news) {
+    console.log(news.text() + ' - ' + lastTime);
     await fs.writeFile(DATA_FILE, news.text(), 'utf-8');
 }
 
@@ -89,7 +90,7 @@ async function checkNewNews() {
 async function main() {
     await checkNewNews();
     //Запускаем проверку каждые 5 минут
-    setInterval(checkNewNews, 5 * 60 * 1000);
+    setInterval(checkNewNews, 3 * 60 * 1000);
 }
 
 await main();
