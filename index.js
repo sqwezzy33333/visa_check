@@ -8,7 +8,7 @@ const DATA_FILES = ['news_ru.txt', 'news_en.txt'];
 const TARGET_URLS = ['https://it.tlscontact.com/by/msq/page.php?pid=news&l=ru', 'https://it.tlscontact.com/by/msq/page.php?pid=news&l=en'];
 let lastTime = moment().format('DD.MM - HH.mm');
 
-let currentNews =  {
+let currentNews = {
     'news_ru.txt': null,
     'news_en.txt': null,
 }
@@ -23,9 +23,10 @@ bot.on('message', async (msg) => {
     if (!text || !text.toLowerCase().includes('last') || !currentNews.text) {
         return;
     }
-    const message = `Последняя новость: "${currentNews.text()}".
-Время проверки: ${lastTime}`
-    await sendTelegramMessage(message, msg.chat.id)
+    const message_ru = `Последняя новость: "${currentNews["news_ru.txt"]?.text()}"`
+    const message_en = `Последняя новость: "${currentNews["news_ru.txt"]?.text()}"`
+    const time = `Время проверки: ${lastTime}`
+    await sendTelegramMessage(`${message_ru + '\n' + message_en + '\n' + time}`, msg.chat.id)
 });
 
 async function sendTelegramMessage(message, id = null) {
