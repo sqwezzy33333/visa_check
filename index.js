@@ -1,14 +1,17 @@
 import axios from 'axios';
-import * as cheerio from 'cheerio'; // Правильный импорт
+import * as cheerio from 'cheerio';
 import * as fs from 'fs/promises';
 import TelegramBot from 'node-telegram-bot-api';
 import moment from 'moment';
 
-const DATA_FILE = 'news.txt';
-const TARGET_URL = 'https://it.tlscontact.com/by/msq/page.php?pid=news&l=ru'; // Замените на URL целевой страницы
+const DATA_FILES = ['news_ru.txt', 'news_en.txt'];
+const TARGET_URLS = ['https://it.tlscontact.com/by/msq/page.php?pid=news&l=ru', 'https://it.tlscontact.com/by/msq/page.php?pid=news&l=en'];
 let lastTime = moment().format('DD.MM - HH.mm');
 
-let currentNews = '';
+let currentNews =  {
+    'news_ru.txt': null,
+    'news_en.txt': null,
+}
 
 // Замените на ваш токен и ID чата
 const TELEGRAM_BOT_TOKEN = "7101593002:AAG-64_zesJof4Lffe0p1fymvsXJ8IEKLfo";
@@ -52,44 +55,50 @@ function parseH3(html) {
 }
 
 
-async function loadPreviousNews() {
+async function loadPreviousNews(path) {
     try {
-        return await fs.readFile(DATA_FILE, 'utf-8');
+        return await fs.readFile(path, 'utf-8');
     } catch (error) {
         return 'Новость не найдена';
     }
 }
 
-async function saveCurrentNews(news) {
+async function saveCurrentNews(news, filename) {
     console.log(news.text() + ' - ' + lastTime);
-    await fs.writeFile(DATA_FILE, news.text(), 'utf-8');
+    await fs.writeFile(filename, news.text(), 'utf-8');
 }
 
 
-async function notifyNewNews(news) {
+async function notifyNewNews(news, url) {
 
     let message = 'Обнаружена новая новость:\n';
 
-    await sendTelegramMessage(message + news.text());
+    await sendTelegramMessage(message + news.text() + '\n' + 'Ссылка - ' + url);
 }
 
 
 async function checkNewNews() {
-    const html = await getPageHTML(TARGET_URL);
-    if (!html) return;
+    let index = -1;
+    for (const url of TARGET_URLS) {
+        index++;
+        const fileName = DATA_FILES[index];
+        const html = await getPageHTML(url);
+        if (!html) continue;
 
-    currentNews = parseH3(html);
-    const previousNews = await loadPreviousNews();
-    lastTime = moment().format('DD.MM - HH.mm');
-    if (currentNews.text() !== previousNews) {
-        await notifyNewNews(currentNews);
+        currentNews[fileName] = parseH3(html);
+        const previousNews = await loadPreviousNews(fileName);
+        lastTime = moment().format('DD.MM - HH.mm');
+        if (currentNews[fileName]?.text() !== previousNews) {
+            await notifyNewNews(currentNews, url);
+        }
+        await saveCurrentNews(currentNews, fileName);
     }
-    await saveCurrentNews(currentNews);
+
 }
 
 async function main() {
     await checkNewNews();
-    //Запускаем проверку каждые 5 минут
+
     setInterval(checkNewNews, 3 * 60 * 1000);
 }
 
