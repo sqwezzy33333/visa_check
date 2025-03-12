@@ -24,7 +24,7 @@ bot.on('message', async (msg) => {
         return;
     }
     const message_ru = `Последняя новость: "${currentNews["news_ru.txt"]?.text()}"`
-    const message_en = `Последняя новость: "${currentNews["news_ru.txt"]?.text()}"`
+    const message_en = `Последняя новость: "${currentNews["news_en.txt"]?.text()}"`
     const time = `Время проверки: ${lastTime}`
     await sendTelegramMessage(`${message_ru + '\n' + message_en + '\n' + time}`, msg.chat.id)
 });
