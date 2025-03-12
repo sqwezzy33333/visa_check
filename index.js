@@ -92,7 +92,7 @@ async function checkNewNews() {
         if (currentNews[fileName]?.text() !== previousNews) {
             await notifyNewNews(currentNews[fileName], url);
         }
-        await saveCurrentNews(currentNews, fileName);
+        await saveCurrentNews(currentNews[fileName], fileName);
     }
 
 }
