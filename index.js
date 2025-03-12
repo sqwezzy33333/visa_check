@@ -90,7 +90,7 @@ async function checkNewNews() {
         const previousNews = await loadPreviousNews(fileName);
         lastTime = moment().format('DD.MM - HH.mm');
         if (currentNews[fileName]?.text() !== previousNews) {
-            await notifyNewNews(currentNews, url);
+            await notifyNewNews(currentNews[fileName], url);
         }
         await saveCurrentNews(currentNews, fileName);
     }
